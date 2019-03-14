@@ -10,6 +10,9 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.CvType;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
+import java.util.List;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Moments;
 
 
 Capture cam;
@@ -21,7 +24,7 @@ ArrayList<MatOfPoint2f> shapes;
 
 void setup() {
   size(640, 480);
-/*
+
   String[] cameras = Capture.list();
   
   if (cameras.length == 0) {
@@ -35,13 +38,13 @@ void setup() {
     
     // The camera can be initialized directly using an 
     // element from the array returned by list():
-    //cam = new Capture(this, 640, 480);
-    //cam.start();     
+    cam = new Capture(this, 640, 480);
+    cam.start();     
   }      
-*/
-  img = loadImage("shapes.jpg");
-  img.resize(640, 480);
-  opencv = new OpenCV(this, img);  
+
+  //img = loadImage("shapes.jpg");
+  //img.resize(640, 480);
+  opencv = new OpenCV(this, cam);  
 }
 
 
@@ -50,102 +53,82 @@ void captureEvent(Capture c) {
 }
 
 void draw() {  
-  opencv.loadImage(img);
-  image(img, 0, 0);
-  
+  opencv.loadImage(cam);
+ 
+  Mat src = Mat.zeros(cam.width, cam.height, Core.LINE_8);
+  OpenCV.toCv(cam, src);
+          
   // hold on to this for later, since adaptiveThreshold is destructive
   Mat gray = OpenCV.imitate(opencv.getGray());
   opencv.getGray().copyTo(gray);
-
-  Mat thresholdMat = OpenCV.imitate(opencv.getGray());
-
-  opencv.blur(5);
-  PImage blur = opencv.getSnapshot();
-  image(blur,0,0);
+    
+  //Mat cannyEdges = new Mat();
+  //Imgproc.Canny(gray, cannyEdges, 10, 100);
+  //PImage canny = opencv.getSnapshot(cannyEdges);
   
-  //Imgproc.adaptiveThreshold(opencv.getGray(), thresholdMat, 255, Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C, Imgproc.THRESH_BINARY_INV, 451, -65);
-  opencv.threshold();
-  PImage threshold = opencv.getSnapshot();
-  image(threshold,0,0);
-
-  contours = new ArrayList<MatOfPoint>();
-  ArrayList<Contour> cnt = opencv.findContours();
-  println(cnt.size());
-
-  //approximations = createPolygonApproximations(contours);
+  Mat thresholdMat = Mat.zeros(cam.width, cam.height, Core.LINE_8);
+  Imgproc.threshold(gray, thresholdMat, 127,255,1);
+  PImage threshold = opencv.getSnapshot(thresholdMat);
   
-  shapes = selectShapes(approximations);
+  OpenCV.toCv(cam, src);
   
-  noFill();
-  smooth();
-  strokeWeight(5);
-  stroke(0, 255, 0);
-  drawContours2f(shapes); 
-}
-
-ArrayList<MatOfPoint2f> selectShapes(ArrayList<MatOfPoint2f> candidates) {
-  float minAllowedContourSide = 50;
-  minAllowedContourSide = minAllowedContourSide * minAllowedContourSide;
-
-  ArrayList<MatOfPoint2f> result = new ArrayList<MatOfPoint2f>();
-
-  for (MatOfPoint2f candidate : candidates) {
-
-    if (candidate.size().height != 4) {
-      continue;
-    } 
-
-    if (!Imgproc.isContourConvex(new MatOfPoint(candidate.toArray()))) {
-      continue;
-    }
-
-    // eliminate markers where consecutive
-    // points are too close together
-    float minDist = img.width * img.width;
-    Point[] points = candidate.toArray();
-    for (int i = 0; i < points.length; i++) {
-      Point side = new Point(points[i].x - points[(i+1)%4].x, points[i].y - points[(i+1)%4].y);
-      float squaredLength = (float)side.dot(side);
-      // println("minDist: " + minDist  + " squaredLength: " +squaredLength);
-      minDist = min(minDist, squaredLength);
-    }
-
-    //  println(minDist);
-
-
-    if (minDist < minAllowedContourSide) {
-      continue;
-    }
-
-    result.add(candidate);
-  }
-
-  return result;
-}
-
-ArrayList<MatOfPoint2f> createPolygonApproximations(ArrayList<MatOfPoint> cntrs) {
-  ArrayList<MatOfPoint2f> result = new ArrayList<MatOfPoint2f>();
-
-  if(cntrs.size() > 0) {
-    double epsilon = cntrs.get(0).size().height * 0.01;
+  List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+  Mat hierarchy = new Mat();
+  Imgproc.findContours(thresholdMat, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
+  //Imgproc.findContours(thresholdMat, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
   
-    for (MatOfPoint contour : cntrs) {
-      MatOfPoint2f approx = new MatOfPoint2f();
-      Imgproc.approxPolyDP(new MatOfPoint2f(contour.toArray()), approx, epsilon, true);
-      result.add(approx);
-    }
-  }
-  return result;
-}
+  MatOfPoint2f approxCurve = new MatOfPoint2f();
+  
+    image(threshold, 0, 0);
+    
+  for (int i = 0; i < contours.size(); i++) {
+    
+    double contourArea = Imgproc.contourArea(contours.get(i));
 
-void drawContours2f(ArrayList<MatOfPoint2f> cntrs) {
-  for (MatOfPoint2f contour : cntrs) {
-    beginShape();
-    Point[] points = contour.toArray();
+    if(contourArea > 2500) {
+    
+      //Convert contours(i) from MatOfPoint to MatOfPoint2f
+      MatOfPoint2f contour2f = new MatOfPoint2f( contours.get(i).toArray() );
+      //Processing on mMOP2f1 which is in type MatOfPoint2f
+      double approxDistance = Imgproc.arcLength(contour2f, true)*0.01;
 
-    for (int i = 0; i < points.length; i++) {
-      vertex((float)points[i].x, (float)points[i].y);
+      Imgproc.approxPolyDP(contour2f, approxCurve, approxDistance, true);  
+      int count = (int) approxCurve.total();
+      
+      Scalar c = new Scalar(255, 0, 0);
+      if(count < 10) {
+       Moments p = Imgproc.moments(contours.get(i), false);
+       int x = (int) (p.get_m10() / p.get_m00());
+       int y = (int) (p.get_m01() / p.get_m00());
+
+        if(count == 4) {      
+             c = new Scalar(0, 0, 255);
+            Imgproc.drawContours(src, contours, -1, c, -1);
+            PImage output = opencv.getSnapshot(src);
+            image(output,0,0);
+            fill(255,0,0);
+            textSize(70);
+            text("Quadrado", x, y);
+        }
+        else if(count == 3) {      
+             c = new Scalar(0, 255, 0);
+            Imgproc.drawContours(src, contours, -1, c, -1);
+            PImage output = opencv.getSnapshot(src);
+            image(output,0,0);
+            fill(0,255,0);
+            textSize(70);
+            text("Triângulo", x, y);
+        }
+        else if(count > 7 && count < 10) {
+          c = new Scalar(255, 255, 0);
+         Imgproc.drawContours(src, contours, -1, c, -1);
+         PImage output = opencv.getSnapshot(src);
+         image(output,0,0);
+          fill(0,0,255);
+          textSize(70);
+          text("Círculo", x, y);
+        }
+      }
     }
-    endShape(CLOSE);
-  }
+  }  
 }
