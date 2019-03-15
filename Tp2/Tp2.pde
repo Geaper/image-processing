@@ -23,11 +23,18 @@ ArrayList<MatOfPoint2f> approximations;
 ArrayList<MatOfPoint2f> shapes;
 int storyboard = 0;
 
+int triangulosCounter = 0;
+int circulosCounter = 0;
+int hexagonosCounter = 0;
+int pentagonosCounter = 0;
+int quadradosCounter = 0;
+
 void setup() {
   size(1280, 720);
   frameRate(30);
   drop = new SDrop(this);
   ipca = loadImage("shapesAbs.jpg");
+  frame.setResizable(true);
 }
 
 void draw() {
@@ -53,10 +60,16 @@ void draw() {
     text("André Monteiro 16202", 75, height - 30);
 
     // Change page
-    if (keyPressed || mousePressed) storyboard =1;
+    if (keyPressed || mousePressed) {
+      storyboard =1;
+      frame.setSize(1280, 770);
+    }
   } else if (storyboard ==1)
   {
     if (image !=null) {
+      
+      background(36);
+      
       image(image, 640, 360);
       image.resize(640, 360);
       opencv = new OpenCV(this, image);  
@@ -90,8 +103,7 @@ void draw() {
 
       MatOfPoint2f approxCurve = new MatOfPoint2f();
 
-
-      println("Counters size is "+contours.size()); 
+      //println("Counters size is "+contours.size()); 
       for (int i = 0; i < contours.size(); i++) {
 
         double contourArea = Imgproc.contourArea(contours.get(i));
@@ -105,7 +117,7 @@ void draw() {
 
           Imgproc.approxPolyDP(contour2f, approxCurve, approxDistance, true);  
           int count = (int) approxCurve.total();
-          println("count= "+count); 
+          //println("count= "+count); 
           if (count < 20) {
             Moments p = Imgproc.moments(contours.get(i), false);
             int x = (int) (p.get_m10() / p.get_m00());
@@ -113,31 +125,58 @@ void draw() {
             ellipse(x+640, y+360, 10, 10);
             fill(0, 0, 0);
             textSize(20);
-            if (count == 4) {      
+            if (count == 4) {   
+               fill(242,177,52);
               text("Quadrilátero", x+580, y+340);
-            } else if (count == 3) {      
+              quadradosCounter++;
+            } else if (count == 3) { 
+              fill(235,85,59);
               text("Triângulo", x+590, y+340);
-            } else if (count == 5) {      
+              triangulosCounter++;
+            } else if (count == 5) { 
+              fill(71,171,108);
               text("Pentágono", x+590, y+340);
-            } else if (count == 6) {      
+              pentagonosCounter++;
+            } else if (count == 6) {   
+              fill(242,53,91);
               text("Hexágono", x+590, y+340);
+              hexagonosCounter++;
             } else if (count > 7 && count < 20) {
+              fill(8,148,161);
               text("Círculo", x+610, y+340);
+              circulosCounter++;
             }
           }
         }
       }
+      // Count shapes
+      fill(235,85,59);
+      text("Triângulos: " + triangulosCounter, 200, 750); 
+      triangulosCounter = 0;
+      fill(8,148,161);
+      text("Círculos: " + circulosCounter, 390, 750); 
+      circulosCounter = 0;
+      fill(71,171,108);
+      text("Pentágonos: " + pentagonosCounter, 600, 750); 
+      pentagonosCounter = 0;
+      fill(242,53,91);
+      text("Hexágonos: " + hexagonosCounter, 820, 750); 
+      hexagonosCounter = 0;
+      fill(242,177,52);
+      text("Quadriláteros: " + quadradosCounter, 1020, 750); 
+      quadradosCounter = 0;
+      
     } else 
     {  
       fill(119,136,153); 
       textSize(60); 
-      text("Drop your image here", 340, 340 );
+      text("Drop your image here", 340, 440 );
     }
   }
 }
 
 void dropEvent(DropEvent theDropEvent) {
-  println("recebeu imagem"); 
+  //println("recebeu imagem"); 
   if (theDropEvent.isImage()) {
     image = theDropEvent.loadImage();
   }
