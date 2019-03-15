@@ -119,7 +119,7 @@ void draw() {
               text("Triângulo", x+590, y+340);
             } else if (count == 5) {      
               text("Pentágono", x+590, y+340);
-            } else if (count == 7) {      
+            } else if (count == 6) {      
               text("Hexágono", x+590, y+340);
             } else if (count > 7 && count < 20) {
               text("Círculo", x+610, y+340);
