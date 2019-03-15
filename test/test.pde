@@ -24,7 +24,7 @@ ArrayList<MatOfPoint2f> shapes;
 
 void setup() {
   size(640, 480);
-
+  /*
   String[] cameras = Capture.list();
   
   if (cameras.length == 0) {
@@ -38,39 +38,38 @@ void setup() {
     
     // The camera can be initialized directly using an 
     // element from the array returned by list():
-    cam = new Capture(this, 640, 480);
-    cam.start();     
+    //cam = new Capture(this, 640, 480);
+    //cam.start();     
   }      
-
-  //img = loadImage("shapes.jpg");
-  //img.resize(640, 480);
-  opencv = new OpenCV(this, cam);  
+*/
+  img = loadImage("shapes.jpg");
+  img.resize(640, 480);
+  opencv = new OpenCV(this,img);  
 }
 
-
+/*
 void captureEvent(Capture c) {
   c.read();
-}
+}*/
 
 void draw() {  
-  opencv.loadImage(cam);
+  opencv.loadImage(img);
  
-  Mat src = Mat.zeros(cam.width, cam.height, Core.LINE_8);
-  OpenCV.toCv(cam, src);
+  Mat src = Mat.zeros(img.width, img.height, Core.LINE_8);
+  OpenCV.toCv(img, src);
           
   // hold on to this for later, since adaptiveThreshold is destructive
   Mat gray = OpenCV.imitate(opencv.getGray());
   opencv.getGray().copyTo(gray);
     
-  //Mat cannyEdges = new Mat();
-  //Imgproc.Canny(gray, cannyEdges, 10, 100);
-  //PImage canny = opencv.getSnapshot(cannyEdges);
+  Mat cannyEdges = new Mat();
+  Imgproc.Canny(gray, cannyEdges, 10, 100);
+  PImage canny = opencv.getSnapshot(cannyEdges);
   
-  Mat thresholdMat = Mat.zeros(cam.width, cam.height, Core.LINE_8);
+  Mat thresholdMat = Mat.zeros(img.width, img.height, Core.LINE_8);
   Imgproc.threshold(gray, thresholdMat, 127,255,1);
   PImage threshold = opencv.getSnapshot(thresholdMat);
   
-  OpenCV.toCv(cam, src);
   
   List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
   Mat hierarchy = new Mat();
@@ -103,7 +102,7 @@ void draw() {
 
         if(count == 4) {      
              c = new Scalar(0, 0, 255);
-            Imgproc.drawContours(src, contours, -1, c, -1);
+            Imgproc.drawContours(cannyEdges, contours, -1, c, -1);
             PImage output = opencv.getSnapshot(src);
             image(output,0,0);
             fill(255,0,0);
@@ -112,7 +111,7 @@ void draw() {
         }
         else if(count == 3) {      
              c = new Scalar(0, 255, 0);
-            Imgproc.drawContours(src, contours, -1, c, -1);
+            Imgproc.drawContours(cannyEdges, contours, -1, c, -1);
             PImage output = opencv.getSnapshot(src);
             image(output,0,0);
             fill(0,255,0);
@@ -121,7 +120,7 @@ void draw() {
         }
         else if(count > 7 && count < 10) {
           c = new Scalar(255, 255, 0);
-         Imgproc.drawContours(src, contours, -1, c, -1);
+         Imgproc.drawContours(cannyEdges, contours, -1, c, -1);
          PImage output = opencv.getSnapshot(src);
          image(output,0,0);
           fill(0,0,255);
